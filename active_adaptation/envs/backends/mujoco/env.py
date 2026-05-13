@@ -1,12 +1,9 @@
-from typing import cast
-
 try:
     from isaaclab.utils import configclass
 except ModuleNotFoundError:
     def configclass(cls):
         return cls
 
-from active_adaptation.assets import AssetCfg
 from active_adaptation.envs.backends.mujoco.adapter import (
     MujocoSceneAdapter,
     MujocoSimAdapter,
@@ -23,15 +20,25 @@ class MujocoBackendEnv(_EnvBase):
         self.robot = self.scene.articulations["robot"]
 
     def setup_scene(self):
+        from active_adaptation.assets import AssetCfg
         from active_adaptation.envs.backends.mujoco.mujoco import MJScene, MJSim
         from active_adaptation.envs.terrain import TERRAINS_MUJOCO
 
         registry = Registry.instance()
-        asset_cfg = cast(AssetCfg, registry.get("asset", self.cfg.robot.name))
+        asset_cfg = registry.get("asset", self.cfg.robot.name)
+        if callable(asset_cfg):
+            robot_cfg = asset_cfg(backend="mujoco")
+        elif isinstance(asset_cfg, AssetCfg):
+            robot_cfg = asset_cfg.mujoco()
+        else:
+            raise ValueError(
+                "Asset configuration must be an instance of AssetCfg or callable, "
+                f"got {type(asset_cfg)}"
+            )
 
         @configclass
         class SceneCfg:
-            robot = asset_cfg.mujoco()
+            robot = robot_cfg
             contact_forces = "robot"
             terrain = TERRAINS_MUJOCO.get(self.cfg.terrain, TERRAINS_MUJOCO["plane"])
 

@@ -1,5 +1,4 @@
 from active_adaptation import ROBOT_MODEL_DIR
-from active_adaptation.assets import AssetCfg
 from active_adaptation.envs.backends.isaac.adapter import (
     IsaacSceneAdapter,
     IsaacSimAdapter,
@@ -40,6 +39,7 @@ class IsaacBackendEnv(_EnvBase):
         from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
         from isaaclab.assets import AssetBaseCfg
         from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+        from active_adaptation.assets import AssetCfg
 
         registry = Registry.instance()
         scene_cfg = InteractiveSceneCfg(

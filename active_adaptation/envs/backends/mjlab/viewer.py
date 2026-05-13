@@ -26,7 +26,7 @@ class MjLabViewer:
         if self._is_setup:
             return
 
-        self._scene = ViserMujocoScene(
+        self._scene = ViserMujocoScene.create(
             self._server,
             self.sim.mj_model,
             self.env.num_envs,
@@ -38,11 +38,8 @@ class MjLabViewer:
 
         tabs = self._server.gui.add_tab_group()
         with tabs.add_tab("Scene", icon=viser.Icon.SETTINGS):
-            self._scene.create_scene_gui()
-        with tabs.add_tab("Visualization", icon=viser.Icon.EYE):
-            self._scene.create_overlay_gui()
-        with tabs.add_tab("Groups", icon=viser.Icon.LAYERS_INTERSECT):
-            self._scene.create_groups_gui()
+            self._scene.create_visualization_gui()
+        self._scene.create_groups_gui(tabs)
         self._is_setup = True
 
     @property

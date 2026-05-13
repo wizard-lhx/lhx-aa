@@ -2,7 +2,6 @@ import math
 import mujoco
 from typing import cast
 
-from active_adaptation.assets import AssetCfg
 from active_adaptation.envs.backends.mjlab.adapter import (
     MjlabSceneAdapter,
     MjlabSimAdapter,
@@ -79,6 +78,7 @@ class MjlabBackendEnv(_EnvBase):
         CollisionCfg.edit_spec = edit_spec
 
         from active_adaptation.envs.backends.mjlab.viewer import MjLabViewer
+        from active_adaptation.assets import AssetCfg
 
         registry = Registry.instance()
         asset_cfg = cast(AssetCfg, registry.get("asset", self.cfg.robot.name))

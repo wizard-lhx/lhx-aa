@@ -4,10 +4,12 @@ import math
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 from typing_extensions import override
 
 from active_adaptation.envs.adapters import SimAdapter, SceneAdapter
+from mjlab.entity.data import EntityData
 
 if TYPE_CHECKING:
     from active_adaptation.envs.backends.mjlab.viewer import MjLabViewer
@@ -15,6 +17,24 @@ if TYPE_CHECKING:
     from mjlab.sim import Simulation
     from mjlab.viewer.offscreen_renderer import OffscreenRenderer
     from mjlab.viewer.viewer_config import ViewerConfig
+
+
+def _install_entity_data_aliases() -> None:
+    if not hasattr(EntityData, "root_link_state_w"):
+        EntityData.root_link_state_w = property(
+            lambda self: torch.cat([self.root_link_pose_w, self.root_link_vel_w], dim=-1)
+        )
+    if not hasattr(EntityData, "body_lin_vel_w"):
+        EntityData.body_lin_vel_w = property(lambda self: self.body_link_lin_vel_w)
+    if not hasattr(EntityData, "body_ang_vel_w"):
+        EntityData.body_ang_vel_w = property(lambda self: self.body_link_ang_vel_w)
+    if not hasattr(EntityData, "joint_limits"):
+        EntityData.joint_limits = property(lambda self: self.joint_pos_limits)
+    if not hasattr(EntityData, "applied_torque"):
+        EntityData.applied_torque = property(lambda self: self.actuator_force)
+
+
+_install_entity_data_aliases()
 
 
 class MjlabSimAdapter(SimAdapter):
