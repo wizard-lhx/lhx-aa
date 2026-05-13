@@ -2,3 +2,4 @@
 2. uv.lock改变
 3. 修改了assetcfg里g1的配置
 4. backend里各个backend的env（mjlab还修改了adapter和viewer）
+5. humanoid.py的link增加右手yawlink

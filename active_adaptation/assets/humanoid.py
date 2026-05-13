@@ -217,7 +217,7 @@ BODY_NAMES_SIMULATION = [
     "left_elbow_link", "right_elbow_link",
     "left_wrist_roll_link", "right_wrist_roll_link",
     "left_wrist_pitch_link", "right_wrist_pitch_link",
-    "left_wrist_yaw_link",
+    "left_wrist_yaw_link", "right_wrist_yaw_link",
 ]
 
 
