@@ -148,6 +148,7 @@ def main(cfg: DictConfig):
         )
         run_idx = run.name.split("-")[-1]
         run.name = f"{run_idx}-{default_run_name}"
+        run.name = cfg.get("run_name", None) or run.name
         setproctitle(run.name)
 
         run_dir = Path(run.dir)
