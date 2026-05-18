@@ -10,6 +10,7 @@ from typing_extensions import override
 
 from active_adaptation.envs.adapters import SimAdapter, SceneAdapter
 from mjlab.entity.data import EntityData
+from mjlab.sensor.contact_sensor import ContactData
 
 if TYPE_CHECKING:
     from active_adaptation.envs.backends.mjlab.viewer import MjLabViewer
@@ -35,6 +36,241 @@ def _install_entity_data_aliases() -> None:
 
 
 _install_entity_data_aliases()
+
+
+def _install_contact_data_aliases() -> None:
+    if not hasattr(ContactData, "net_forces_w"):
+        ContactData.net_forces_w = property(lambda self: self.force)
+
+
+_install_contact_data_aliases()
+
+
+try:
+    from isaaclab.utils.string import resolve_matching_names
+except ModuleNotFoundError:
+    from mjlab.utils.lab_api.string import resolve_matching_names
+
+
+class MjlabEntityIndexingAdapter:
+    _JOINT_FIELDS = {"joint_ids", "joint_q_adr", "joint_v_adr", "ctrl_ids"}
+
+    def __init__(self, indexing, joint_ids: torch.Tensor, body_ids: torch.Tensor):
+        self._indexing = indexing
+        self._joint_ids = joint_ids
+        self._body_ids = body_ids
+
+    def __getattr__(self, name):
+        value = getattr(self._indexing, name)
+        if isinstance(value, torch.Tensor):
+            if name in self._JOINT_FIELDS:
+                return value[self._joint_ids.to(value.device)]
+            if name == "body_ids":
+                return value[self._body_ids.to(value.device)]
+        return value
+
+
+class MjlabEntityDataAdapter:
+    _JOINT_FIELDS = {
+        "default_joint_pos",
+        "default_joint_vel",
+        "default_joint_pos_limits",
+        "joint_limits",
+        "joint_pos_limits",
+        "soft_joint_pos_limits",
+        "joint_pos",
+        "joint_pos_biased",
+        "joint_vel",
+        "joint_acc",
+        "joint_pos_target",
+        "joint_vel_target",
+        "encoder_bias",
+    }
+    _ACTUATOR_FIELDS = {
+        "actuator_force",
+        "applied_torque",
+        "joint_effort_target",
+    }
+
+    def __init__(
+        self,
+        data,
+        joint_ids: torch.Tensor,
+        body_ids: torch.Tensor,
+        actuator_ids: torch.Tensor,
+    ):
+        self._data = data
+        self._joint_ids = joint_ids
+        self._body_ids = body_ids
+        self._actuator_ids = actuator_ids
+        self._indexing = MjlabEntityIndexingAdapter(
+            data.indexing,
+            joint_ids,
+            body_ids,
+        )
+
+    def __getattr__(self, name):
+        if name == "indexing":
+            return self._indexing
+
+        value = getattr(self._data, name)
+        if not isinstance(value, torch.Tensor):
+            return value
+
+        if name in self._JOINT_FIELDS:
+            return value[:, self._joint_ids.to(value.device)]
+        if name in self._ACTUATOR_FIELDS:
+            return value[:, self._actuator_ids.to(value.device)]
+        if name.startswith("body_"):
+            return value[:, self._body_ids.to(value.device)]
+        return value
+
+
+class MjlabEntityAdapter:
+    def __init__(self, entity, sim):
+        self._entity = entity
+        self.cfg = entity.cfg
+
+        joint_names = list(entity.joint_names)
+        body_names = list(entity.body_names)
+        ctrl_ids = entity.data.indexing.ctrl_ids
+        actuator_names = [
+            sim.mj_model.actuator(int(ctrl_id)).name.split("/")[-1]
+            for ctrl_id in ctrl_ids.cpu()
+        ]
+
+        self._joint_names = list(entity.cfg.joint_names_simulation)
+        self._body_names = list(entity.cfg.body_names_simulation)
+        device = entity.data.joint_pos.device
+        self._joint_ids = torch.tensor(
+            [joint_names.index(name) for name in self._joint_names],
+            dtype=torch.long,
+            device=device,
+        )
+        self._body_ids = torch.tensor(
+            [body_names.index(name) for name in self._body_names],
+            dtype=torch.long,
+            device=device,
+        )
+        self._actuator_ids = torch.tensor(
+            [actuator_names.index(name) for name in self._joint_names],
+            dtype=torch.long,
+            device=device,
+        )
+
+    @property
+    def data(self):
+        return MjlabEntityDataAdapter(
+            self._entity.data,
+            self._joint_ids,
+            self._body_ids,
+            self._actuator_ids,
+        )
+
+    @property
+    def joint_names(self):
+        return tuple(self._joint_names)
+
+    @property
+    def body_names(self):
+        return tuple(self._body_names)
+
+    @property
+    def num_joints(self):
+        return len(self._joint_names)
+
+    @property
+    def num_bodies(self):
+        return len(self._body_names)
+
+    def find_joints(self, name_keys, preserve_order: bool = False):
+        return resolve_matching_names(name_keys, self._joint_names, preserve_order)
+
+    def find_bodies(self, name_keys, preserve_order: bool = False):
+        return resolve_matching_names(name_keys, self._body_names, preserve_order)
+
+    def _map_joint_ids(self, joint_ids):
+        if joint_ids is None:
+            return self._joint_ids
+        if isinstance(joint_ids, slice):
+            external_ids = torch.arange(
+                len(self._joint_ids),
+                device=self._joint_ids.device,
+            )[joint_ids]
+        else:
+            external_ids = torch.as_tensor(
+                joint_ids,
+                dtype=torch.long,
+                device=self._joint_ids.device,
+            )
+        return self._joint_ids[external_ids].reshape(-1)
+
+    def _set_joint_tensor(self, tensor, value, joint_ids, env_ids):
+        joint_ids = self._map_joint_ids(joint_ids).to(tensor.device)
+        if env_ids is None:
+            env_ids = slice(None)
+        elif not isinstance(env_ids, slice):
+            env_ids = torch.as_tensor(env_ids, dtype=torch.long, device=tensor.device)
+
+        if isinstance(env_ids, slice):
+            tensor[env_ids, joint_ids] = value
+        else:
+            tensor[env_ids[:, None], joint_ids[None, :]] = value
+
+    def set_joint_position_target(self, position, joint_ids=None, env_ids=None):
+        self._set_joint_tensor(
+            self._entity.data.joint_pos_target,
+            position,
+            joint_ids,
+            env_ids,
+        )
+
+    def set_joint_velocity_target(self, velocity, joint_ids=None, env_ids=None):
+        self._set_joint_tensor(
+            self._entity.data.joint_vel_target,
+            velocity,
+            joint_ids,
+            env_ids,
+        )
+
+    def set_joint_effort_target(self, effort, joint_ids=None, env_ids=None):
+        self._set_joint_tensor(
+            self._entity.data.joint_effort_target,
+            effort,
+            joint_ids,
+            env_ids,
+        )
+
+    def write_joint_state_to_sim(
+        self,
+        position,
+        velocity,
+        joint_ids=None,
+        env_ids=None,
+    ):
+        self._entity.write_joint_state_to_sim(
+            position,
+            velocity,
+            joint_ids=self._map_joint_ids(joint_ids),
+            env_ids=env_ids,
+        )
+
+    def write_joint_position_to_sim(self, position, joint_ids=None, env_ids=None):
+        self._entity.write_joint_position_to_sim(
+            position,
+            joint_ids=self._map_joint_ids(joint_ids),
+            env_ids=env_ids,
+        )
+
+    def write_joint_velocity_to_sim(self, velocity, joint_ids=None, env_ids=None):
+        self._entity.write_joint_velocity_to_sim(
+            velocity,
+            joint_ids=self._map_joint_ids(joint_ids),
+            env_ids=env_ids,
+        )
+
+    def __getattr__(self, name):
+        return getattr(self._entity, name)
 
 
 class MjlabSimAdapter(SimAdapter):
@@ -119,6 +355,11 @@ class MjlabSceneAdapter(SceneAdapter):
     def __init__(self, scene: Scene, sim: Simulation):
         self._scene = scene
         self._sim = sim
+        self._articulations = {
+            name: MjlabEntityAdapter(entity, sim)
+            for name, entity in scene.entities.items()
+            if hasattr(entity.cfg, "joint_names_simulation")
+        }
 
     @override
     def zero_external_wrenches(self) -> None:
@@ -127,7 +368,7 @@ class MjlabSceneAdapter(SceneAdapter):
 
     @property
     def articulations(self):
-        return self._scene.entities
+        return self._articulations
 
     def __getattr__(self, name):
         return getattr(self._scene, name)

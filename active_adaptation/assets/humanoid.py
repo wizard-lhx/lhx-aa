@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Literal
+from active_adaptation import ROBOT_MODEL_DIR
 import active_adaptation.utils.symmetry as symmetry_utils
 
 from active_adaptation.assets.asset_cfg import (
@@ -269,9 +270,12 @@ def make_mjlab_cfg():
     from mjlab.actuator import BuiltinPositionActuatorCfg
     from mjlab.entity import EntityArticulationInfoCfg
     from mjlab.sensor import ContactMatch, ContactSensorCfg as MjlabContactSensorCfg
+    from mjlab.utils.spec_config import CollisionCfg
 
     def spec_fn():
-        return mujoco.MjSpec.from_file(str(FILE_DIR / "G1" / "mjcf" / "g1.xml"))
+        return mujoco.MjSpec.from_file(
+            str(ROBOT_MODEL_DIR / "g1_mjlab" / "g1_mjlab.xml")
+        )
 
     cfg = EntityCfg(
         init_state=EntityCfg.InitialStateCfg(
@@ -292,9 +296,15 @@ def make_mjlab_cfg():
                 )
                 for pattern, effort_limit, stiffness, damping, armature in MJLAB_ACTUATOR_GROUPS
             ),
-            soft_joint_pos_limit_factor=0.9,
         ),
-        collisions=(),
+        collisions=(
+            CollisionCfg(
+                geom_names_expr=(".*_collision.*",),
+                contype=0,
+                conaffinity=1,
+                condim=3,
+            ),
+        ),
         joint_symmetry_mapping=JOINT_SYMMETRY_MAPPING,
         spatial_symmetry_mapping=SPATIAL_SYMMETRY_MAPPING,
         joint_names_simulation=JOINT_NAMES_SIMULATION,

@@ -60,12 +60,10 @@ class MjlabBackendEnv(_EnvBase):
                 CollisionCfg.set_array_field(geom.solref, resolved_fields["solref"][i])
                 CollisionCfg.set_array_field(geom.solimp, resolved_fields["solimp"][i])
 
-                if resolved_fields["margin"][i] is not None:
-                    geom.margin = resolved_fields["margin"][i]
-                if resolved_fields["gap"][i] is not None:
-                    geom.gap = resolved_fields["gap"][i]
-                if resolved_fields["solmix"][i] is not None:
-                    geom.solmix = resolved_fields["solmix"][i]
+                for field_name in ("margin", "gap", "solmix"):
+                    field = resolved_fields.get(field_name)
+                    if field is not None and field[i] is not None:
+                        setattr(geom, field_name, field[i])
 
             other_geoms = ()
             if self.disable_other_geoms:
