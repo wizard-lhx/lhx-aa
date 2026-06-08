@@ -81,9 +81,9 @@ ACTUATORS = {
             ".*_wrist_yaw_joint": 22.0,
         },
         stiffness={
-            ".*_hip_yaw_joint": STIFFNESS_7520_14 * 2.0,
+            ".*_hip_yaw_joint": STIFFNESS_7520_14,
             ".*_hip_roll_joint": STIFFNESS_7520_22,
-            ".*_hip_pitch_joint": STIFFNESS_7520_14 * 4.0,
+            ".*_hip_pitch_joint": STIFFNESS_7520_14,
             ".*_knee_joint": STIFFNESS_7520_22,
             ".*ankle.*": 2.0 * STIFFNESS_5020,
             "waist.*": 2.0 * STIFFNESS_5020,
@@ -130,9 +130,9 @@ ACTUATORS = {
 }
 
 MJLAB_ACTUATOR_GROUPS = (
-    (".*_hip_yaw_joint", 88.0, STIFFNESS_7520_14 * 2.0, DAMPING_7520_14, ARMATURE_7520_14),
+    (".*_hip_yaw_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
     (".*_hip_roll_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
-    (".*_hip_pitch_joint", 88.0, STIFFNESS_7520_14 * 4.0, DAMPING_7520_14, ARMATURE_7520_14),
+    (".*_hip_pitch_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
     (".*_knee_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
     (".*_ankle.*", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
     ("waist.*", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
