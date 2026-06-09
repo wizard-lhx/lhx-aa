@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 from typing import Literal
 from active_adaptation import ROBOT_MODEL_DIR
 import active_adaptation.utils.symmetry as symmetry_utils
@@ -258,13 +259,25 @@ def make_asset_cfg() -> AssetCfg:
     )
 
 
-def make_isaaclab_cfg():
-    asset_cfg = make_asset_cfg()
+def make_beyondmimic_asset_cfg() -> AssetCfg:
+    return replace(
+        make_asset_cfg(),
+        self_collisions=True,
+        solver_position_iteration_count=8,
+        solver_velocity_iteration_count=4,
+    )
+
+
+def _make_isaaclab_cfg(asset_cfg: AssetCfg):
     sensors = {sensor.name: sensor.isaaclab() for sensor in asset_cfg.sensors_isaaclab}
     return asset_cfg.isaaclab(), sensors
 
 
-def make_mjlab_cfg():
+def make_isaaclab_cfg():
+    return _make_isaaclab_cfg(make_asset_cfg())
+
+
+def make_mjlab_cfg(beyondmimic: bool = False):
     import mujoco
     from active_adaptation.assets.asset_cfg import EntityCfg
     from mjlab.actuator import BuiltinPositionActuatorCfg
@@ -300,7 +313,7 @@ def make_mjlab_cfg():
         collisions=(
             CollisionCfg(
                 geom_names_expr=(".*_collision.*",),
-                contype=0,
+                contype=1 if beyondmimic else 0,
                 conaffinity=1,
                 condim=3,
             ),
@@ -339,5 +352,21 @@ def make_cfg(backend: Literal["isaaclab", "mjlab", "mujoco"]):
     raise ValueError(f"Invalid backend: {backend}")
 
 
+def make_beyondmimic_cfg(backend: Literal["isaaclab", "mjlab", "mujoco"]):
+    if backend == "isaaclab":
+        return _make_isaaclab_cfg(make_beyondmimic_asset_cfg())
+    if backend == "mjlab":
+        return make_mjlab_cfg(beyondmimic=True)
+    if backend == "mujoco":
+        return make_beyondmimic_asset_cfg().mujoco()
+    raise ValueError(f"Invalid backend: {backend}")
+
+
 G1_WAIST_UNLOCKED_CFG = make_asset_cfg()
+G1_WAIST_UNLOCKED_BEYONDMIMIC_CFG = make_beyondmimic_asset_cfg()
 registry.register("asset", "g1_waist_unlocked", make_cfg)
+registry.register(
+    "asset",
+    "g1_waist_unlocked_beyondmimic",
+    make_beyondmimic_cfg,
+)

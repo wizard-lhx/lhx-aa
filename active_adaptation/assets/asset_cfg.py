@@ -280,6 +280,8 @@ class AssetCfg:
     body_names_simulation: Optional[List[str]] = None
 
     self_collisions: bool = True
+    solver_position_iteration_count: int = 4
+    solver_velocity_iteration_count: int = 1
     mjlab_collisions: List[MjlabCollisionCfg] = field(default_factory=list)
 
     joint_symmetry_mapping: Optional[Dict[str, Tuple[int, str]]] = None
@@ -413,8 +415,8 @@ class AssetCfg:
         )
         articulation_props = sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=self.self_collisions,
-            solver_position_iteration_count=4,
-            solver_velocity_iteration_count=1,
+            solver_position_iteration_count=self.solver_position_iteration_count,
+            solver_velocity_iteration_count=self.solver_velocity_iteration_count,
         )
         collision_props = sim_utils.CollisionPropertiesCfg(
             contact_offset=0.02,
@@ -630,4 +632,3 @@ def to_simulation_body_order(
     if preferred_body_names is None:
         return list(body_names)
     return sort_names_by_preferred_order(body_names, preferred_body_names)
-
