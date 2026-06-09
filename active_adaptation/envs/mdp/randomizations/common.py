@@ -694,20 +694,42 @@ class perturb_body_mass(Randomization):
 class perturb_body_com(Randomization):
     supported_backends = ("isaac", "mjlab")
     def __init__(
-        self, env, **perturb_ranges: Tuple[float, float]
+        self,
+        env,
+        body_names: str | list[str] | None = None,
+        x: Tuple[float, float] = (0.0, 0.0),
+        y: Tuple[float, float] = (0.0, 0.0),
+        z: Tuple[float, float] = (0.0, 0.0),
+        **perturb_ranges: Tuple[float, float],
     ):
         super().__init__(env)
         self.asset = self.env.scene.articulations["robot"]
-
-        self.body_ids, self.body_names, values = string_utils.resolve_matching_names_values(
-            perturb_ranges, self.asset.body_names
-        )
+        self.axis_specific = body_names is not None
+        if self.axis_specific:
+            self.body_ids, self.body_names = self.asset.find_bodies(body_names)
+            self.axis_low = torch.tensor(
+                [x[0], y[0], z[0]],
+                device=self.device,
+                dtype=torch.float32,
+            )
+            self.axis_high = torch.tensor(
+                [x[1], y[1], z[1]],
+                device=self.device,
+                dtype=torch.float32,
+            )
+        else:
+            self.body_ids, self.body_names, values = string_utils.resolve_matching_names_values(
+                perturb_ranges, self.asset.body_names
+            )
+            self.pos_ranges = torch.tensor(
+                values,
+                device=self.device,
+                dtype=torch.float32,
+            )
         if len(self.body_ids) == 0:
             raise ValueError(
                 "No bodies matched the provided names for COM perturbation."
             )
-
-        self.pos_ranges = torch.tensor(values, device=self.device, dtype=torch.float32)
 
         if self.env.backend == "mjlab":
             _mjlab_expand_model_fields(self.env, "body_ipos")
@@ -728,19 +750,33 @@ class perturb_body_com(Randomization):
         logging.info(f"Randomize body CoM of {self.body_names} upon startup.")
         if self.env.backend == "isaac":
             coms = self.asset.root_physx_view.get_coms().clone()
-            rand_sample = uniform(
-                self.pos_ranges[:, 0].unsqueeze(0).unsqueeze(-1).expand_as(coms[:, self.body_ids, :3]),
-                self.pos_ranges[:, 1].unsqueeze(0).unsqueeze(-1).expand_as(coms[:, self.body_ids, :3])
-            )
-            rand_sample[:, :, 0] *= 0.5
+            if self.axis_specific:
+                rand_sample = uniform(
+                    self.axis_low.reshape(1, 1, 3).expand_as(coms[:, self.body_ids, :3]),
+                    self.axis_high.reshape(1, 1, 3).expand_as(coms[:, self.body_ids, :3]),
+                )
+            else:
+                rand_sample = uniform(
+                    self.pos_ranges[:, 0].unsqueeze(0).unsqueeze(-1).expand_as(coms[:, self.body_ids, :3]),
+                    self.pos_ranges[:, 1].unsqueeze(0).unsqueeze(-1).expand_as(coms[:, self.body_ids, :3])
+                )
+                rand_sample[:, :, 0] *= 0.5
             coms[:, self.body_ids, :3] += rand_sample.to('cpu')
             indices = torch.arange(self.asset.num_instances)
             self.asset.root_physx_view.set_coms(coms, indices)
             assert torch.allclose(self.asset.root_physx_view.get_coms(), coms)
         elif self.env.backend == "mjlab":
             num_bodies = self.global_body_ids.numel()
-            low = self.pos_ranges[:, 0].unsqueeze(0).unsqueeze(-1).expand(self.num_envs, num_bodies, 3)
-            high = self.pos_ranges[:, 1].unsqueeze(0).unsqueeze(-1).expand(self.num_envs, num_bodies, 3)
+            if self.axis_specific:
+                low = self.axis_low.reshape(1, 1, 3).expand(
+                    self.num_envs,
+                    num_bodies,
+                    3,
+                )
+                high = self.axis_high.reshape(1, 1, 3).expand_as(low)
+            else:
+                low = self.pos_ranges[:, 0].unsqueeze(0).unsqueeze(-1).expand(self.num_envs, num_bodies, 3)
+                high = self.pos_ranges[:, 1].unsqueeze(0).unsqueeze(-1).expand(self.num_envs, num_bodies, 3)
             offsets = uniform(low, high)
 
             model = self.env.sim.model
