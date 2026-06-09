@@ -436,9 +436,13 @@ def make_mjlab_cfg(beyondmimic: bool = False):
         MjlabContactSensorCfg(
             name="contact_forces",
             primary=ContactMatch(mode="body", pattern=".*", entity="robot"),
-            secondary=ContactMatch(mode="body", pattern="terrain", entity=None),
+            secondary=(
+                None
+                if beyondmimic
+                else ContactMatch(mode="body", pattern="terrain", entity=None)
+            ),
             fields=("found", "force"),
-            reduce="maxforce",
+            reduce="netforce" if beyondmimic else "maxforce",
             num_slots=1,
             track_air_time=True,
             history_length=3,
