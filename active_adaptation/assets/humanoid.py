@@ -50,6 +50,14 @@ INIT_JOINT_POS = {
     "waist_pitch_joint": 0.0,
 }
 
+BM_INIT_POS = (0.0, 0.0, 0.76)
+BM_INIT_JOINT_POS = {
+    **INIT_JOINT_POS,
+    ".*_hip_pitch_joint": -0.312,
+    ".*_knee_joint": 0.669,
+    ".*_ankle_pitch_joint": -0.363,
+}
+
 ACTUATORS = {
     "base_legs": ActuatorCfg(
         joint_names_expr=".*",
@@ -130,6 +138,82 @@ ACTUATORS = {
     ),
 }
 
+BM_ACTUATORS = {
+    "base_legs": replace(
+        ACTUATORS["base_legs"],
+        effort_limit={
+            ".*_hip_yaw_joint": 88.0,
+            ".*_hip_roll_joint": 139.0,
+            ".*_hip_pitch_joint": 88.0,
+            ".*_knee_joint": 139.0,
+            ".*_ankle.*": 50.0,
+            "waist_(roll|pitch)_joint": 50.0,
+            "waist_yaw_joint": 88.0,
+            ".*_shoulder.*": 25.0,
+            ".*_elbow.*": 25.0,
+            ".*_wrist_roll_joint": 25.0,
+            ".*_wrist_pitch_joint": 5.0,
+            ".*_wrist_yaw_joint": 5.0,
+        },
+        velocity_limit={
+            ".*_hip_yaw_joint": 32.0,
+            ".*_hip_roll_joint": 20.0,
+            ".*_hip_pitch_joint": 32.0,
+            ".*_knee_joint": 20.0,
+            ".*_ankle.*": 37.0,
+            "waist_(roll|pitch)_joint": 37.0,
+            "waist_yaw_joint": 32.0,
+            ".*_shoulder.*": 37.0,
+            ".*_elbow_joint": 37.0,
+            ".*_wrist_roll_joint": 37.0,
+            ".*_wrist_pitch_joint": 22.0,
+            ".*_wrist_yaw_joint": 22.0,
+        },
+        stiffness={
+            ".*_hip_yaw_joint": STIFFNESS_7520_14,
+            ".*_hip_roll_joint": STIFFNESS_7520_22,
+            ".*_hip_pitch_joint": STIFFNESS_7520_14,
+            ".*_knee_joint": STIFFNESS_7520_22,
+            ".*_ankle.*": 2.0 * STIFFNESS_5020,
+            "waist_(roll|pitch)_joint": 2.0 * STIFFNESS_5020,
+            "waist_yaw_joint": STIFFNESS_7520_14,
+            ".*_shoulder.*": STIFFNESS_5020,
+            ".*_elbow_joint": STIFFNESS_5020,
+            ".*_wrist_roll_joint": STIFFNESS_5020,
+            ".*_wrist_pitch_joint": STIFFNESS_4010,
+            ".*_wrist_yaw_joint": STIFFNESS_4010,
+        },
+        damping={
+            ".*_hip_yaw_joint": DAMPING_7520_14,
+            ".*_hip_roll_joint": DAMPING_7520_22,
+            ".*_hip_pitch_joint": DAMPING_7520_14,
+            ".*_knee_joint": DAMPING_7520_22,
+            ".*_ankle.*": 2.0 * DAMPING_5020,
+            "waist_(roll|pitch)_joint": 2.0 * DAMPING_5020,
+            "waist_yaw_joint": DAMPING_7520_14,
+            ".*_shoulder.*": DAMPING_5020,
+            ".*_elbow_joint": DAMPING_5020,
+            ".*_wrist_roll_joint": DAMPING_5020,
+            ".*_wrist_pitch_joint": DAMPING_4010,
+            ".*_wrist_yaw_joint": DAMPING_4010,
+        },
+        armature={
+            ".*_hip_yaw_joint": ARMATURE_7520_14,
+            ".*_hip_roll_joint": ARMATURE_7520_22,
+            ".*_hip_pitch_joint": ARMATURE_7520_14,
+            ".*_knee_joint": ARMATURE_7520_22,
+            ".*_ankle.*": 2.0 * ARMATURE_5020,
+            "waist_(roll|pitch)_joint": 2.0 * ARMATURE_5020,
+            "waist_yaw_joint": ARMATURE_7520_14,
+            ".*_shoulder.*": ARMATURE_5020,
+            ".*_elbow_joint": ARMATURE_5020,
+            ".*_wrist_roll_joint": ARMATURE_5020,
+            ".*_wrist_pitch_joint": ARMATURE_4010,
+            ".*_wrist_yaw_joint": ARMATURE_4010,
+        },
+    )
+}
+
 MJLAB_ACTUATOR_GROUPS = (
     (".*_hip_yaw_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
     (".*_hip_roll_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
@@ -137,6 +221,21 @@ MJLAB_ACTUATOR_GROUPS = (
     (".*_knee_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
     (".*_ankle.*", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
     ("waist.*", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
+    (".*_shoulder_.*_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
+    (".*_elbow_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
+    (".*_wrist_roll_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
+    (".*_wrist_pitch_joint", 5.0, STIFFNESS_4010, DAMPING_4010, ARMATURE_4010),
+    (".*_wrist_yaw_joint", 5.0, STIFFNESS_4010, DAMPING_4010, ARMATURE_4010),
+)
+
+BM_MJLAB_ACTUATOR_GROUPS = (
+    (".*_hip_yaw_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
+    (".*_hip_roll_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
+    (".*_hip_pitch_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
+    (".*_knee_joint", 139.0, STIFFNESS_7520_22, DAMPING_7520_22, ARMATURE_7520_22),
+    (".*_ankle.*", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
+    ("waist_(roll|pitch)_joint", 50.0, 2.0 * STIFFNESS_5020, 2.0 * DAMPING_5020, 2.0 * ARMATURE_5020),
+    ("waist_yaw_joint", 88.0, STIFFNESS_7520_14, DAMPING_7520_14, ARMATURE_7520_14),
     (".*_shoulder_.*_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
     (".*_elbow_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
     (".*_wrist_roll_joint", 25.0, STIFFNESS_5020, DAMPING_5020, ARMATURE_5020),
@@ -262,6 +361,12 @@ def make_asset_cfg() -> AssetCfg:
 def make_beyondmimic_asset_cfg() -> AssetCfg:
     return replace(
         make_asset_cfg(),
+        init_state=InitialStateCfg(
+            pos=BM_INIT_POS,
+            joint_pos=BM_INIT_JOINT_POS,
+            joint_vel={".*": 0.0},
+        ),
+        actuators=BM_ACTUATORS,
         self_collisions=True,
         solver_position_iteration_count=8,
         solver_velocity_iteration_count=4,
@@ -292,8 +397,8 @@ def make_mjlab_cfg(beyondmimic: bool = False):
 
     cfg = EntityCfg(
         init_state=EntityCfg.InitialStateCfg(
-            pos=INIT_POS,
-            joint_pos=INIT_JOINT_POS,
+            pos=BM_INIT_POS if beyondmimic else INIT_POS,
+            joint_pos=BM_INIT_JOINT_POS if beyondmimic else INIT_JOINT_POS,
             joint_vel={".*": 0.0},
         ),
         spec_fn=spec_fn,
@@ -307,7 +412,11 @@ def make_mjlab_cfg(beyondmimic: bool = False):
                     armature=armature,
                     frictionloss=0.01,
                 )
-                for pattern, effort_limit, stiffness, damping, armature in MJLAB_ACTUATOR_GROUPS
+                for pattern, effort_limit, stiffness, damping, armature in (
+                    BM_MJLAB_ACTUATOR_GROUPS
+                    if beyondmimic
+                    else MJLAB_ACTUATOR_GROUPS
+                )
             ),
         ),
         collisions=(
