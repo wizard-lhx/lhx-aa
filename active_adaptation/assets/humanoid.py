@@ -367,7 +367,7 @@ def make_beyondmimic_asset_cfg() -> AssetCfg:
             joint_vel={".*": 0.0},
         ),
         actuators=BM_ACTUATORS,
-        self_collisions=True,
+        self_collisions=False,
         solver_position_iteration_count=8,
         solver_velocity_iteration_count=4,
     )
